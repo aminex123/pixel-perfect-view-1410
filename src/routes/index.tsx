@@ -1,24 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { VerificationHero } from "@/components/VerificationHero";
+import { VerificationForm } from "@/components/VerificationForm";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Verify a certificate — CertiVerify" },
+      { name: "description", content: "Confirm the authenticity and details of a credential in seconds with CertiVerify." },
+      { property: "og:title", content: "Verify a certificate — CertiVerify" },
+      { property: "og:description", content: "Confirm the authenticity and details of a credential in seconds." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <>
+      <VerificationHero />
+      <div className="relative -mt-28 mx-auto max-w-2xl px-5">
+        <VerificationForm />
+      </div>
+    </>
   );
 }
