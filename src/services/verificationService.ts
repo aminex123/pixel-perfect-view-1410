@@ -19,7 +19,7 @@ const MAX_ATTEMPTS = 10;
 
 export async function verifyCertificate(req: VerifyRequest): Promise<VerifyResponse> {
   const now = Date.now();
-  while (attempts.length && now - attempts[0] > WINDOW_MS) attempts.shift();
+  while (attempts.length && now - attempts[0]! > WINDOW_MS) attempts.shift();
   if (attempts.length >= MAX_ATTEMPTS) return { verified: false, reason: "rate_limited" };
   attempts.push(now);
 
