@@ -180,7 +180,7 @@ function Card({ children }: { children: React.ReactNode }) {
 const inputCls = (err: boolean) =>
   `h-12 w-full rounded-xl border bg-card pl-11 pr-4 text-[15px] outline-none transition placeholder:text-muted-foreground/70 hover:border-ring/50 focus:border-primary focus:ring-4 focus:ring-primary/15 ${err ? "border-destructive" : "border-input"}`;
 
-function Field({ id, label, error, icon, children }: { id: string; label: string; error?: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Field({ id, label, error, icon, children }: { id: string; label: string; error?: string | undefined; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <label htmlFor={id} className="mb-2 block text-sm font-medium">{label}</label>

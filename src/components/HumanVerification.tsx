@@ -11,7 +11,7 @@ type Props = {
   value: string;
   onChange: (v: string) => void;
   onRefresh: () => void;
-  error?: string;
+  error?: string | undefined;
 };
 
 export function HumanVerification({ challenge, value, onChange, onRefresh, error }: Props) {
