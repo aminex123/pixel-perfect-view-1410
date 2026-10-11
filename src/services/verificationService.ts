@@ -30,7 +30,7 @@ export async function verifyCertificate(req: VerifyRequest): Promise<VerifyRespo
     const num = normalize(c.certificateNumber);
     // Accept full number or the part after the last dash
     const tail = num.split("-").pop();
-    return (input === num || input === tail || input === c.candidateNumber) && c.sessionDate === req.sessionDate;
+    return (input === num || input === tail || input === normalize(c.candidateNumber)) && c.sessionDate === req.sessionDate;
   });
 
   if (!record) return { verified: false, reason: "not_found" };

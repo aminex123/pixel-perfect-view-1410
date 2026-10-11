@@ -11,6 +11,10 @@ export type PublicCertificate = {
   certificateNumber: string;
   candidateNumber: string;
   sessionDate: string; // ISO yyyy-mm-dd
+  resultsDate?: string; // ISO yyyy-mm-dd
+  expiresAt?: string; // ISO yyyy-mm-dd
+  birthDate?: string; // ISO yyyy-mm-dd
+  centre?: string;
   firstName: string;
   lastName: string;
   credentialName: string;
