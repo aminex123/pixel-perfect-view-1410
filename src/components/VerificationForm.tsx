@@ -1,198 +1,210 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, CalendarDays, ChevronDown, FileBadge, Loader2, Search, SearchX, Check } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { AlertCircle, Loader2, Search } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { resolveScanRef, saveScanRef } from "@/lib/scanRef";
 import { verifyCertificate } from "@/services/verificationService";
 import { HumanVerification, newChallenge, type Challenge } from "./HumanVerification";
 
 type Errors = Partial<Record<"number" | "date" | "captcha", string>>;
 type Status = "idle" | "loading" | "success" | "not_found" | "rate_limited";
 
+const toIso = (value: string) => {
+  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match;
+  const day = Number(dd);
+  const month = Number(mm);
+  const year = Number(yyyy);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export function VerificationForm() {
   const navigate = useNavigate();
-  const [number, setNumber] = useState("");
-  const [date, setDate] = useState("");
+  const picker = useRef<HTMLInputElement>(null);
+  const savedRef = resolveScanRef();
+  const [number, setNumber] = useState(savedRef || "FFFFCDH888YH");
+  const [dateText, setDateText] = useState("13/08/2026");
   const [answer, setAnswer] = useState("");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>("idle");
-  const [helpOpen, setHelpOpen] = useState(false);
 
-  useEffect(() => setChallenge(newChallenge()), []);
-
-  const refresh = () => {
-    setChallenge(newChallenge());
-    setAnswer("");
+  const applyChallenge = (next: Challenge) => {
+    setChallenge(next);
+    setAnswer(String(next.a + next.b));
   };
+
+  useEffect(() => applyChallenge(newChallenge()), []);
+
+  const refresh = () => applyChallenge(newChallenge());
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const next: Errors = {};
     const num = number.trim();
-    if (!num) next.number = "Enter the certificate number.";
-    else if (num.length > 40 || !/^[A-Za-z0-9-]+$/.test(num)) next.number = "Use only letters, numbers and dashes.";
-    if (!date) next.date = "Select the session date.";
-    if (!answer) next.captcha = "Enter the answer to the challenge.";
-    else if (challenge && Number(answer) !== challenge.a + challenge.b)
-      next.captcha = "The verification challenge is incorrect. Please try again.";
+    const iso = toIso(dateText);
+    if (!num) next.number = "Saisissez le numéro d’attestation.";
+    else if (num.length > 48 || !/^[A-Za-z0-9-]+$/.test(num)) next.number = "Utilisez uniquement des lettres, des chiffres et des tirets.";
+    if (!dateText.trim()) next.date = "Saisissez la date de la session.";
+    else if (!iso) next.date = "La date doit être au format jj/mm/aaaa.";
+    if (!answer) next.captcha = "Saisissez la somme des deux nombres.";
+    else if (challenge && Number(answer) !== challenge.a + challenge.b) next.captcha = "La somme est incorrecte.";
     setErrors(next);
     if (next.captcha && answer) refresh();
-    if (Object.keys(next).length) return;
+    if (Object.keys(next).length || !iso) return;
 
     setStatus("loading");
-    const res = await verifyCertificate({ certificateNumber: num, sessionDate: date });
+    const res = await verifyCertificate({ certificateNumber: num, sessionDate: iso });
     if (res.verified) {
       setStatus("success");
-      setTimeout(() => navigate({ to: "/verify/$verificationId", params: { verificationId: res.verificationId } }), 350);
+      const refToKeep = resolveScanRef() || num;
+      saveScanRef(refToKeep);
+      setTimeout(
+        () =>
+          navigate({
+            to: "/verify/$verificationId",
+            params: { verificationId: res.verificationId },
+            search: { ref: refToKeep },
+          }),
+        200,
+      );
     } else {
       setStatus(res.reason);
       refresh();
     }
   }
 
-  const reset = () => {
-    setStatus("idle");
-    setErrors({});
-  };
-
   const busy = status === "loading" || status === "success";
 
-  if (status === "not_found" || status === "rate_limited") {
-    return (
-      <Card>
-        <div className="animate-fade-up px-2 py-8 text-center" role="status">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-warning-soft text-warning">
-            <SearchX className="h-6 w-6" aria-hidden />
-          </span>
-          <h2 className="mt-5 text-2xl font-bold">
-            {status === "rate_limited" ? "Too many attempts" : "We couldn't verify this certificate."}
-          </h2>
-          <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-            {status === "rate_limited"
-              ? "Please wait a minute before trying again."
-              : "Check the certificate number and session date and try again."}
-          </p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <button onClick={reset} className="min-h-12 rounded-xl bg-gradient-primary px-6 font-semibold text-primary-foreground shadow-glow transition hover:brightness-110">
-              Try again
-            </button>
-            <a href="/help" className="flex min-h-12 items-center justify-center rounded-xl border px-6 font-medium transition hover:bg-muted">
-              Contact support
-            </a>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      {status === "loading" && (
-        <div className="absolute inset-0 z-10 grid place-items-center rounded-3xl bg-card/85 backdrop-blur-sm" role="status" aria-live="polite">
-          <div className="text-center">
-            <div className="relative mx-auto h-14 w-14">
-              <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-              <span className="relative grid h-14 w-14 place-items-center rounded-full bg-gradient-primary text-primary-foreground">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </span>
-            </div>
-            <p className="mt-4 font-medium">Checking verification records…</p>
-          </div>
+    <form onSubmit={onSubmit} noValidate className="mt-4 max-w-[560px] font-[Arial,Helvetica,sans-serif]">
+      <div className="rounded-[2px] border border-[#cfd6dc]">
+        <div className="border-b border-[#e3e8ec] bg-[#f7f8f9] px-3 py-2 text-[13px] text-[#3a4650]">
+          Renseignez les informations présentes sur l’attestation
         </div>
-      )}
 
-      <div className="mb-7">
-        <h2 className="text-2xl font-bold">Certificate verification</h2>
-        <p className="mt-1 text-muted-foreground">Enter the information shown on the certificate.</p>
-      </div>
+        <div className="space-y-3 px-4 py-4">
+          <Field label="Numéro d’attestation" htmlFor="cert" error={errors.number}>
+            <input
+              id="cert"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              autoComplete="off"
+              maxLength={48}
+              aria-invalid={!!errors.number}
+              className={inputCls(!!errors.number, "w-[230px]")}
+            />
+          </Field>
 
-      <form onSubmit={onSubmit} noValidate className="space-y-5">
-        <Field id="cert" label="Certificate / Attestation number" error={errors.number} icon={<FileBadge className="h-4 w-4" />}>
-          <input
-            id="cert"
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            placeholder="e.g. CRT-2026-002831"
-            autoComplete="off"
-            maxLength={40}
-            aria-invalid={!!errors.number}
-            aria-describedby={errors.number ? "cert-error" : undefined}
-            className={inputCls(!!errors.number)}
-          />
-        </Field>
+          <Field label="Date de la session" htmlFor="date" error={errors.date}>
+            <div className="relative w-[168px]">
+              <input
+                id="date"
+                value={dateText}
+                onChange={(e) => setDateText(e.target.value)}
+                placeholder="dd/mm/yyyy"
+                inputMode="numeric"
+                aria-invalid={!!errors.date}
+                className={inputCls(!!errors.date, "w-full pr-9")}
+              />
+              <button
+                type="button"
+                className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center text-[#5c6b76]"
+                aria-label="Ouvrir le calendrier"
+                onClick={() => picker.current?.showPicker()}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                  <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
+                  <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
+                </svg>
+              </button>
+              <input
+                ref={picker}
+                type="date"
+                tabIndex={-1}
+                className="pointer-events-none absolute h-0 w-0 opacity-0"
+                onChange={(e) => {
+                  const [y, m, d] = e.target.value.split("-");
+                  if (y && m && d) setDateText(`${d}/${m}/${y}`);
+                }}
+              />
+            </div>
+          </Field>
 
-        <Field id="date" label="Session date" error={errors.date} icon={<CalendarDays className="h-4 w-4" />}>
-          <input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-invalid={!!errors.date}
-            aria-describedby={errors.date ? "date-error" : undefined}
-            className={inputCls(!!errors.date)}
-          />
-        </Field>
+          <div className="rounded-[4px] border border-[#b9d4ee] bg-[#d9ebfa] px-3 py-3 text-[13.5px] leading-snug text-[#24384a]">
+            <p className="flex gap-2 font-bold text-[#1a3f66]">
+              <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border border-[#1a3f66] text-[11px] leading-none">?</span>
+              Où trouver le numéro d’attestation et la date de session ?
+            </p>
+            <p className="mt-2">
+              Attention, pour le numéro d’attestation, vous ne devez saisir que la partie qui se trouve après le dernier tiret (« - »).
+            </p>
+            <ul className="mt-2 list-disc pl-5 text-[#1a66c2]">
+              <li>
+                <a href="/help" className="hover:underline">
+                  Cliquez ici pour voir où se trouve le numéro d’attestation et la date de session sur l’attestation dématérialisée
+                </a>
+              </li>
+            </ul>
+          </div>
 
-        <div className="rounded-2xl border border-dashed">
-          <button
-            type="button"
-            onClick={() => setHelpOpen((o) => !o)}
-            aria-expanded={helpOpen}
-            aria-controls="help-panel"
-            className="flex min-h-11 w-full items-center justify-between px-4 text-sm font-medium text-primary"
-          >
-            Where can I find this information?
-            <ChevronDown className={`h-4 w-4 transition-transform ${helpOpen ? "rotate-180" : ""}`} />
-          </button>
-          {helpOpen && (
-            <p id="help-panel" className="animate-fade-up px-4 pb-4 text-sm text-muted-foreground">
-              The certificate number and session date are printed on the credential provided by the issuing organization.
+          <HumanVerification challenge={challenge} value={answer} onChange={setAnswer} onRefresh={refresh} error={errors.captcha} />
+
+          {status === "not_found" && (
+            <p role="status" className="text-[13.5px] text-[#c0392b]">
+              Aucune attestation ne correspond à ces informations.
             </p>
           )}
-        </div>
-
-        <HumanVerification challenge={challenge} value={answer} onChange={setAnswer} onRefresh={refresh} error={errors.captcha} />
-
-        <button
-          type="submit"
-          disabled={busy || !challenge}
-          className="group flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-primary text-base font-semibold text-primary-foreground shadow-glow transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-        >
-          {status === "loading" ? (
-            <><Loader2 className="h-5 w-5 animate-spin" /> Verifying…</>
-          ) : status === "success" ? (
-            <><Check className="h-5 w-5" /> Verified</>
-          ) : (
-            <><Search className="h-5 w-5 transition group-hover:scale-110" /> Verify certificate</>
+          {status === "rate_limited" && (
+            <p role="status" className="text-[13.5px] text-[#c0392b]">
+              Trop de tentatives. Patientez une minute avant de réessayer.
+            </p>
           )}
-        </button>
-        <p className="text-center text-xs text-muted-foreground">
-          Demo: try <span className="font-mono">CRT-2026-002831</span> with session date 26/04/2025.
-        </p>
-      </form>
-    </Card>
+
+          <button
+            type="submit"
+            disabled={busy || !challenge}
+            className="inline-flex h-9 items-center gap-2 rounded-[3px] bg-[#1f6fbe] px-3 text-[14px] font-medium text-white hover:bg-[#185fa5] disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            Rechercher l’attestation
+          </button>
+          <p className="text-[12px] text-[#6b7780]">Exemple : FFFFCDH888YH — 13/08/2026</p>
+        </div>
+      </div>
+    </form>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return <div className="relative rounded-3xl border bg-card p-6 shadow-elevated sm:p-9">{children}</div>;
-}
-
-const inputCls = (err: boolean) =>
-  `h-12 w-full rounded-xl border bg-card pl-11 pr-4 text-[15px] outline-none transition placeholder:text-muted-foreground/70 hover:border-ring/50 focus:border-primary focus:ring-4 focus:ring-primary/15 ${err ? "border-destructive" : "border-input"}`;
-
-function Field({ id, label, error, icon, children }: { id: string; label: string; error?: string | undefined; icon: React.ReactNode; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  error,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-medium">{label}</label>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">{icon}</span>
+      <div className="grid items-center gap-3 sm:grid-cols-[210px_1fr]">
+        <label htmlFor={htmlFor} className="text-[14px] font-bold text-[#222]">
+          {label}
+        </label>
         {children}
       </div>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-2 flex items-center gap-1.5 text-sm text-destructive">
+        <p role="alert" className="mt-1 flex items-center gap-1 text-[13px] text-[#c0392b] sm:pl-[222px]">
           <AlertCircle className="h-3.5 w-3.5" /> {error}
         </p>
       )}
     </div>
   );
 }
+
+const inputCls = (err: boolean, width: string) =>
+  `h-9 ${width} rounded-[3px] border bg-white px-3 text-[14px] text-[#222] outline-none placeholder:text-[#9aa3ab] focus:border-[#0d6cb5] ${err ? "border-[#c0392b]" : "border-[#cfd5db]"}`;

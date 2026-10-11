@@ -1,26 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { VerificationHero } from "@/components/VerificationHero";
+import { useEffect, useState } from "react";
+import { PageFrame } from "@/components/PageFrame";
 import { VerificationForm } from "@/components/VerificationForm";
+import { saveScanRef } from "@/lib/scanRef";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  ref: z.string().optional(),
+});
 
 export const Route = createFileRoute("/")({
+  validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Verify a certificate — CertiVerify" },
-      { name: "description", content: "Confirm the authenticity and details of a credential in seconds with CertiVerify." },
-      { property: "og:title", content: "Verify a certificate — CertiVerify" },
-      { property: "og:description", content: "Confirm the authenticity and details of a credential in seconds." },
+      { title: "Consultation d’une attestation — CertiVerify" },
+      { name: "description", content: "Consultez et vérifiez une attestation avec CertiVerify." },
+      { property: "og:title", content: "Consultation d’une attestation — CertiVerify" },
+      { property: "og:description", content: "Consultez et vérifiez une attestation avec CertiVerify." },
     ],
   }),
   component: Index,
 });
 
 function Index() {
+  const { ref: refFromUrl } = Route.useSearch();
+  const [open, setOpen] = useState(false);
+
+  // Quietly keep ?ref= for the scan flow — do not open the form automatically.
+  useEffect(() => {
+    if (refFromUrl?.trim()) saveScanRef(refFromUrl);
+  }, [refFromUrl]);
+
   return (
-    <>
-      <VerificationHero />
-      <div className="relative -mt-28 mx-auto max-w-2xl px-5">
-        <VerificationForm />
-      </div>
-    </>
+    <PageFrame>
+      {open ? (
+        <>
+          <h1 className="mt-6 font-[Arial,Helvetica,sans-serif] text-[21px] font-medium tracking-normal text-[#1d4e7a]">
+            Consultation et vérification des résultats d’une attestation
+          </h1>
+          <VerificationForm />
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-4 inline-flex h-9 items-center rounded-[3px] bg-[#1f6fbe] px-3 text-[14px] text-white hover:bg-[#185fa5]"
+        >
+          Pour contrôler l’authenticité de l’attestation cliquez-ici.
+        </button>
+      )}
+    </PageFrame>
   );
 }
