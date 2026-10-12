@@ -38,12 +38,14 @@ export function VerificationResult({ cert }: { cert: PublicCertificate; verifica
   return (
     <div className="mt-5 font-[Arial,Helvetica,sans-serif]">
       <h1 className="font-[Arial,Helvetica,sans-serif] text-[21px] font-medium tracking-normal text-[#1d4e7a]">
-        Consultation et vérification des résultats d’une attestation
+        Consultation et vérification des résultats du TCF
       </h1>
 
       <div className="mt-4 border border-[#f0e2a8] bg-[#fff6d8] px-4 py-3 text-[14px] leading-snug text-[#3a3420]">
         <p>
-          Résultats pour « {cert.credentialName} » du <span className="font-bold">{fmtDate(cert.sessionDate)}</span>{" "}
+          Résultats pour le «{" "}
+          <span className="text-[15.5px] font-bold">TCF Québec - Test de conaissance du français pour le Québec</span> » du{" "}
+          <span className="font-bold">{fmtDate(cert.sessionDate)}</span>{" "}
           pour le candidat n°
           <span className="font-bold">{cert.candidateNumber}</span>.
         </p>
@@ -53,29 +55,7 @@ export function VerificationResult({ cert }: { cert: PublicCertificate; verifica
         <p>
           Prénom : <span className="font-bold uppercase">{cert.firstName}</span>
         </p>
-        {cert.birthDate && (
-          <p>
-            Date de naissance : <span className="font-bold">{fmtDateLong(cert.birthDate)}</span>
-          </p>
-        )}
-        {cert.centre && (
-          <p>
-            Centre : <span className="font-bold">{cert.centre}</span>
-          </p>
-        )}
-        {cert.resultsDate && (
-          <p>
-            Date de délivrance des résultats : <span className="font-bold">{fmtDateLong(cert.resultsDate)}</span>
-          </p>
-        )}
-        {cert.expiresAt && (
-          <p>
-            Expire le : <span className="font-bold">{fmtDateLong(cert.expiresAt)}</span>
-          </p>
-        )}
-        <p>
-          N° de l’attestation : <span className="font-bold">{cert.certificateNumber}</span>
-        </p>
+       
       </div>
 
       <div className="mt-4 flex w-full flex-col gap-5">
