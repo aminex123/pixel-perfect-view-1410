@@ -100,28 +100,30 @@ export function VerificationForm() {
               <input
                 id="date"
                 value={dateText}
-                onChange={(e) => setDateText(e.target.value)}
+                readOnly
                 placeholder="dd/mm/yyyy"
-                inputMode="numeric"
                 aria-invalid={!!errors.date}
-                className={inputCls(!!errors.date, "w-full pr-9")}
+                tabIndex={-1}
+                className={`${inputCls(!!errors.date, "w-full pr-9")} pointer-events-none`}
               />
-              <button
-                type="button"
-                className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center text-[#5c6b76]"
-                aria-label="Ouvrir le calendrier"
-                onClick={() => picker.current?.showPicker()}
-              >
+              <span className="pointer-events-none absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center text-[#5c6b76]" aria-hidden>
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8}>
                   <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
                   <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
                 </svg>
-              </button>
+              </span>
               <input
                 ref={picker}
                 type="date"
-                tabIndex={-1}
-                className="pointer-events-none absolute h-0 w-0 opacity-0"
+                aria-label="Date de la session"
+                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch {
+                    /* browser opens the picker on click */
+                  }
+                }}
                 onChange={(e) => {
                   const [y, m, d] = e.target.value.split("-");
                   if (y && m && d) setDateText(`${d}/${m}/${y}`);
