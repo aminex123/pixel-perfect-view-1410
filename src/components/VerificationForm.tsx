@@ -23,8 +23,7 @@ const toIso = (value: string) => {
 export function VerificationForm() {
   const navigate = useNavigate();
   const picker = useRef<HTMLInputElement>(null);
-  const savedRef = resolveScanRef();
-  const [number, setNumber] = useState(savedRef || "");
+  const [number, setNumber] = useState("");
   const [dateText, setDateText] = useState("");
   const [answer, setAnswer] = useState("");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
