@@ -169,7 +169,6 @@ export function VerificationForm() {
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Rechercher l’attestation
           </button>
-          <p className="text-[12px] text-[#6b7780]">Exemple : FFFFCDH888YH — 13/08/2026</p>
         </div>
       </div>
     </form>
