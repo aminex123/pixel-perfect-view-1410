@@ -24,21 +24,19 @@ export function VerificationForm() {
   const navigate = useNavigate();
   const picker = useRef<HTMLInputElement>(null);
   const savedRef = resolveScanRef();
-  const [number, setNumber] = useState(savedRef || "FFFFCDH888YH");
-  const [dateText, setDateText] = useState("13/08/2026");
+  const [number, setNumber] = useState(savedRef || "");
+  const [dateText, setDateText] = useState("");
   const [answer, setAnswer] = useState("");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>("idle");
 
-  const applyChallenge = (next: Challenge) => {
-    setChallenge(next);
-    setAnswer(String(next.a + next.b));
+  useEffect(() => setChallenge(newChallenge()), []);
+
+  const refresh = () => {
+    setChallenge(newChallenge());
+    setAnswer("");
   };
-
-  useEffect(() => applyChallenge(newChallenge()), []);
-
-  const refresh = () => applyChallenge(newChallenge());
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
